@@ -1,0 +1,14 @@
+weather
+
+default
+1b9a6dcf60e2947a519c6a0752422864
+Ravindra
+e878597c2e342a03d260177675a8305e
+
+
+
+news
+4639b6b9c8df4d3087e01643728e7b6f
+
+google-api 
+AIzaSyDX7xQSdtHe68fQGCAWx4RanvaYygljMlg

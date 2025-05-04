@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MINI - Personal Voice Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2vw;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 5vw, 2.2rem);
+      color: #00e5ff;
+      margin-bottom: 2vh;
+      text-shadow: 0 0 10px #00e5ff80;
+      animation: fadeInDown 1s ease;
+      text-align: center;
+    }
+
+    #chat-window {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: clamp(10px, 2vw, 15px);
+      width: 100%;
+      max-width: 800px;
+      height: clamp(300px, 60vh, 450px);
+      overflow-y: auto;
+      margin-bottom: 2vh;
+      box-shadow: 0 0 20px #00000040;
+      animation: fadeIn 1s ease;
+    }
+
+    .message {
+      display: flex;
+      align-items: flex-start;
+      margin: 1.5vh 0;
+      gap: clamp(8px, 1vw, 10px);
+      opacity: 0;
+      animation: slideIn 0.5s forwards;
+    }
+
+    .message.user { justify-content: flex-end; flex-direction: row-reverse; }
+    .message.bot { justify-content: flex-start; }
+    .avatar {
+      width: clamp(30px, 4vw, 38px);
+      height: clamp(30px, 4vw, 38px);
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+
+    .message-text {
+      padding: clamp(8px, 1.5vw, 12px) clamp(10px, 2vw, 16px);
+      border-radius: 12px;
+      max-width: 80%;
+      line-height: 1.4;
+      font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+      word-wrap: break-word;
+      transition: background 0.3s ease;
+    }
+
+    .user .message-text { background: #007bff; color: white; border-top-right-radius: 0; }
+    .bot .message-text { background: #4caf50; color: white; border-top-left-radius: 0; }
+    .bot .message-text.correct { background: #4caf50; }
+    .bot .message-text.incorrect { background: #f44336; }
+
+    .quiz-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: clamp(8px, 1vw, 10px);
+      margin-top: 1vh;
+    }
+
+    .quiz-option {
+      padding: clamp(8px, 1.5vw, 10px);
+      border: none;
+      border-radius: 8px;
+      background: #333;
+      color: white;
+      font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+      cursor: pointer;
+      transition: background 0.3s ease;
+      flex: 1;
+      min-width: clamp(80px, 25%, 120px);
+      text-align: center;
+    }
+
+    .quiz-option:hover:not(:disabled) {
+      background: #555;
+    }
+
+    .quiz-option:disabled {
+      background: #222;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .quiz-option.selected {
+      background: #007bff;
+      color: white;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: clamp(8px, 1vw, 10px);
+      width: 100%;
+      max-width: 800px;
+      animation: fadeInUp 1s ease;
+    }
+
+    input[type="text"] {
+      padding: clamp(10px, 2vw, 12px);
+      width: 100%;
+      max-width: 60%;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+    }
+
+    input[type="text"]:disabled {
+      background: rgba(255, 255, 255, 0.05);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    button {
+      padding: clamp(10px, 2vw, 12px);
+      border: none;
+      border-radius: 8px;
+      background: #111;
+      color: white;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+      cursor: pointer;
+      transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: clamp(4px, 1vw, 6px);
+      flex: 1;
+      max-width: 150px;
+      justify-content: center;
+    }
+
+    button:disabled {
+      background: #222;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    button:hover:not(:disabled) {
+      background: #333;
+    }
+
+    button i { font-size: clamp(1rem, 2.5vw, 1.1rem); }
+
+    #theme-switcher {
+      position: fixed;
+      top: 2vh;
+      right: 2vw;
+      background: rgba(255, 255, 255, 0.1);
+      padding: clamp(8px, 1.5vw, 10px) clamp(15px, 2vw, 20px);
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: clamp(0.8rem, 2vw, 0.9rem);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Name Prompt Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: #222;
+      padding: clamp(15px, 3vw, 20px);
+      border-radius: 12px;
+      text-align: center;
+      width: clamp(250px, 80vw, 400px);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content h2 {
+      font-size: clamp(1.2rem, 4vw, 1.5rem);
+      margin-bottom: 1vh;
+    }
+
+    .modal-content input {
+      width: 100%;
+      padding: clamp(8px, 2vw, 10px);
+      margin: 1vh 0;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255, 255, 257, 0.1);
+      color: white;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+    }
+
+    .modal-content button {
+      width: 100%;
+      max-width: none;
+      padding: clamp(10px, 2vw, 12px);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeInDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      body { padding: 3vw; }
+      h1 { font-size: clamp(1.5rem, 6vw, 1.8rem); }
+      #chat-window { 
+        height: clamp(250px, 55vh, 400px);
+        max-width: 100%;
+      }
+      .message-text { max-width: 85%; }
+      input[type="text"] { 
+        max-width: 100%;
+        margin-bottom: 1vh;
+      }
+      .controls { 
+        flex-direction: column;
+        align-items: stretch;
+      }
+      button { 
+        max-width: 100%;
+        padding: clamp(12px, 3vw, 14px);
+      }
+      .quiz-option {
+        min-width: 100%;
+      }
+      #theme-switcher { 
+        top: 1vh;
+        right: 1vw;
+        padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2vw, 12px);
+        font-size: clamp(0.7rem, 2.5vw, 0.8rem);
+      }
+      .modal-content {
+        width: clamp(200px, 90vw, 350px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 4vw; }
+      h1 { font-size: clamp(1.2rem, 7vw, 1.5rem); }
+      #chat-window { 
+        height: clamp(200px, 50vh, 350px);
+        padding: 8px;
+      }
+      .message { margin: 1vh 0; }
+      .avatar { 
+        width: clamp(24px, 5vw, 30px);
+        height: clamp(24px, 5vw, 30px);
+      }
+      .message-text { 
+        font-size: clamp(0.75rem, 3vw, 0.85rem);
+        padding: clamp(6px, 2vw, 8px) clamp(8px, 2.5vw, 10px);
+      }
+      input[type="text"] { 
+        font-size: clamp(0.8rem, 3vw, 0.9rem);
+        padding: clamp(8px, 2.5vw, 10px);
+      }
+      button { 
+        font-size: clamp(0.8rem, 3vw, 0.9rem);
+        padding: clamp(10px, 3vw, 12px);
+      }
+      button i { font-size: clamp(0.9rem, 3vw, 1rem); }
+      .quiz-option {
+        font-size: clamp(0.7rem, 3vw, 0.8rem);
+        padding: clamp(6px, 2vw, 8px);
+      }
+      #theme-switcher { 
+        padding: clamp(5px, 2vw, 6px) clamp(8px, 2.5vw, 10px);
+        font-size: clamp(0.6rem, 3vw, 0.7rem);
+      }
+      .modal-content h2 {
+        font-size: clamp(1rem, 4vw, 1.2rem);
+      }
+    }
+  </style>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <h1>🧠 Mini - Personal Voice Assistant</h1>
+  
+  <div id="chat-window"></div>
+
+  <div class="controls">
+    <input type="text" id="user-input" placeholder="Type something..." />
+    <button id="send-btn" onclick="sendText()"><i class="fas fa-paper-plane"></i>Send</button>
+    <button id="speak-btn" onclick="startListening()"><i class="fas fa-microphone"></i>Speak</button>
+    <button id="clear-btn" onclick="clearChat()"><i class="fas fa-trash"></i>Clear</button>
+  </div>
+
+  <!-- Theme Switcher -->
+  <div id="theme-switcher" onclick="toggleTheme()">
+    <i class="fas fa-moon"></i> Change Theme
+  </div>
+
+  <!-- Name Prompt Modal -->
+  <div id="name-modal" class="modal">
+    <div class="modal-content">
+      <h2>Welcome to Mini</h2>
+      <p>Please enter your name:</p>
+      <input type="text" id="name-input" placeholder="Your name..." />
+      <button onclick="saveName()"><i class="fas fa-save"></i>Save</button>
+    </div>
+  </div>
+
+  <script>
+    const chatWindow = document.getElementById("chat-window");
+    const userInput = document.getElementById("user-input");
+    const nameModal = document.getElementById("name-modal");
+    const nameInput = document.getElementById("name-input");
+    const sendBtn = document.getElementById("send-btn");
+    const speakBtn = document.getElementById("speak-btn");
+    const clearBtn = document.getElementById("clear-btn");
+    const AVATARS = { user: "https://cdn-icons-png.flaticon.com/512/1144/1144760.png", bot: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png" };
+    
+    let isDarkMode = true;
+    let userName = localStorage.getItem("userName") || null;
+    let currentSessionId = "session_" + Date.now();
+    let isChatActive = true; // Track if the chat is active
+
+    function addMessage(text, sender, typewriter = false, correct = null) {
+      const messageDiv = document.createElement("div");
+      messageDiv.className = "message " + sender;
+      const avatar = document.createElement("img");
+      avatar.src = AVATARS[sender];
+      avatar.className = "avatar";
+      const textDiv = document.createElement("div");
+      textDiv.className = "message-text";
+      if (sender === "bot" && correct !== null) {
+        textDiv.className += correct ? " correct" : " incorrect";
+      }
+      
+      if (typewriter && sender === "bot") {
+        typeText(text, textDiv);
+      } else {
+        textDiv.innerText = text;
+      }
+
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(textDiv);
+      chatWindow.appendChild(messageDiv);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function addQuizQuestion(message, question, options) {
+      const messageDiv = document.createElement("div");
+      messageDiv.className = "message bot";
+      const avatar = document.createElement("img");
+      avatar.src = AVATARS.bot;
+      avatar.className = "avatar";
+      const textDiv = document.createElement("div");
+      textDiv.className = "message-text";
+      textDiv.innerText = message + "\n" + question;
+
+      const optionsDiv = document.createElement("div");
+      optionsDiv.className = "quiz-options";
+      const answerKeys = ["A", "B", "C"];
+      options.forEach((option, index) => {
+        const button = document.createElement("button");
+        button.className = "quiz-option";
+        button.innerText = option;
+        button.dataset.answer = answerKeys[index];
+        button.onclick = () => {
+          if (!isChatActive) return; // Prevent interaction after exit
+          // Highlight selected button and disable all buttons
+          button.classList.add("selected");
+          Array.from(optionsDiv.querySelectorAll(".quiz-option")).forEach(btn => {
+            btn.disabled = true;
+          });
+          sendPrompt(button.dataset.answer);
+        };
+        optionsDiv.appendChild(button);
+      });
+
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(textDiv);
+      messageDiv.appendChild(optionsDiv);
+      chatWindow.appendChild(messageDiv);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function typeText(text, element, delay = 25) {
+      let i = 0;
+      function type() {
+        if (i < text.length) {
+          element.innerHTML += text.charAt(i++);
+          setTimeout(type, delay);
+        }
+      }
+      type();
+    }
+
+    function speak(text) {
+      const utter = new SpeechSynthesisUtterance(text);
+      speechSynthesis.speak(utter);
+    }
+
+    function disableChat() {
+      isChatActive = false;
+      userInput.disabled = true;
+      sendBtn.disabled = true;
+      speakBtn.disabled = true;
+      clearBtn.disabled = true;
+    }
+
+    function sendPrompt(prompt) {
+      if (!isChatActive) return; // Prevent sending prompts after exit
+      addMessage(prompt, "user");
+      fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          prompt, 
+          user_name: userName || "User", 
+          session_id: currentSessionId 
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.type === "exit") {
+            addMessage(data.message, "bot", true);
+            disableChat();
+          } else if (data.type === "quiz_question") {
+            addQuizQuestion(data.message, data.question, data.options);
+          } else {
+            addMessage(data.message, "bot", true, data.correct);
+            if (data.message.includes("Quiz finished") || data.message.includes("Quiz ended")) {
+              currentSessionId = "session_" + Date.now(); // Reset session for a new quiz
+            }
+          }
+          speak(data.message);
+        })
+        .catch(err => {
+          addMessage("Error: Could not process your request.", "bot", true);
+        });
+    }
+
+    function sendText() {
+      if (!isChatActive) return; // Prevent sending after exit
+      const value = userInput.value.trim();
+      if (value !== "") {
+        sendPrompt(value);
+        userInput.value = "";
+      }
+    }
+
+    function startListening() {
+      if (!isChatActive) return; // Prevent listening after exit
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-US";
+      recognition.start();
+      recognition.onresult = function (event) {
+        const speech = event.results[0][0].transcript;
+        userInput.value = speech; // Populate input box with speech
+        userInput.focus(); // Focus on input for editing
+      };
+      recognition.onerror = () => {
+        addMessage("Could not understand. Try again.", "bot", true);
+      };
+    }
+
+    function clearChat() {
+      if (!isChatActive) return; // Prevent clearing after exit
+      localStorage.removeItem("chatHistory");
+      chatWindow.innerHTML = "";
+      currentSessionId = "session_" + Date.now();
+    }
+
+    function toggleTheme() {
+      isDarkMode = !isDarkMode;
+      if (isDarkMode) {
+        document.body.style.backgroundColor = "#111";
+        document.body.style.color = "#fff";
+      } else {
+        document.body.style.backgroundColor = "#f5f5f5";
+        document.body.style.color = "#111";
+      }
+    }
+
+    function showNameModal() {
+      nameModal.style.display = "flex";
+      nameInput.focus();
+    }
+
+    function saveName() {
+      const name = nameInput.value.trim();
+      if (name) {
+        userName = name;
+        localStorage.setItem("userName", name);
+        nameModal.style.display = "none";
+        addMessage(`Welcome, ${name}! I'm Mini, your AI assistant. How can I help you today?`, "bot", true);
+      } else {
+        alert("Please enter a valid name!");
+      }
+    }
+
+    // Handle Enter key press to submit prompt
+    userInput.addEventListener("keypress", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // Prevent default form submission behavior
+        sendText();
+      }
+    });
+
+    // Handle Enter key for name input
+    nameInput.addEventListener("keypress", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveName();
+      }
+    });
+
+    window.onload = function () {
+      const history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+      history.forEach(msg => addMessage(msg.text, msg.sender));
+      if (!userName) {
+        showNameModal();
+      } else {
+        addMessage(`Welcome back, ${userName}! How can I help you today?`, "bot", true);
+      }
+    };
+  </script>
+</body>
+</html>
